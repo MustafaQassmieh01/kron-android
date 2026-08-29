@@ -1,0 +1,107 @@
+package dev.kron.app.screens.search.details
+
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Bookmark
+import androidx.compose.material.icons.outlined.BookmarkBorder
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import dev.kron.app.R
+import dev.kron.app.application.KronApplication
+import dev.kron.app.models.network.Event
+import dev.kron.app.screens.other.EventCard
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SearchDetailsScreen(
+    app: KronApplication,
+    schoolId: String,
+    programmeId: String,
+    onBack: () -> Unit,
+    onEvent: (String) -> Unit
+) {
+    val bookmarks by app.appSettings.bookmarkedProgrammes.collectAsState()
+    var events by remember(programmeId) { mutableStateOf<List<Event>>(emptyList()) }
+    var loading by remember(programmeId) { mutableStateOf(true) }
+    var error by remember(programmeId) { mutableStateOf<String?>(null) }
+
+    LaunchedEffect(programmeId, schoolId) {
+        loading = true
+        error = null
+        runCatching { app.apiService.getScheduleEvents(schoolId, listOf(programmeId)) }
+            .onSuccess { events = it.events }
+            .onFailure { error = it.message ?: "Failed to load schedule" }
+        loading = false
+    }
+
+    val bookmarked = bookmarks.containsKey(programmeId)
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(stringResource(R.string.schedule_title)) },
+                navigationIcon = { TextButton(onClick = onBack) { Text(stringResource(R.string.common_back)) } },
+                actions = {
+                    IconButton(
+                        enabled = events.isNotEmpty(),
+                        onClick = {
+                            if (bookmarked) {
+                                app.appSettings.removeBookmarkedProgramme(programmeId)
+                                app.eventStorage.removeEventsForProgramme(programmeId)
+                            } else {
+                                app.appSettings.addBookmarkedProgramme(programmeId, schoolId)
+                                app.eventStorage.saveEvents(events)
+                            }
+                        }
+                    ) {
+                        Icon(
+                            if (bookmarked) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder,
+                            if (bookmarked) stringResource(R.string.a11y_remove_bookmark) else stringResource(R.string.a11y_bookmark)
+                        )
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        when {
+            loading -> Box(Modifier.padding(padding).fillMaxSize()) {
+                CircularProgressIndicator(Modifier.padding(32.dp))
+            }
+            error != null -> Text(
+                error.orEmpty(),
+                color = MaterialTheme.colorScheme.error,
+                modifier = Modifier.padding(padding).padding(20.dp)
+            )
+            events.isEmpty() -> Text(
+                stringResource(R.string.schedule_no_events),
+                modifier = Modifier.padding(padding).padding(20.dp)
+            )
+            else -> LazyColumn(
+                Modifier.padding(padding),
+                contentPadding = PaddingValues(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                item {
+                    Text(programmeId, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                    Text(
+                        if (bookmarked) stringResource(R.string.schedule_saved) else stringResource(R.string.schedule_previewing),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                items(events.sortedBy { it.from }, key = { it.id }) { event ->
+                    EventCard(event) {
+                        app.eventStorage.saveEvents(listOf(event))
+                        onEvent(event.id)
+                    }
+                }
+            }
+        }
+    }
+}
