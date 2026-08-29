@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">Kron</string>
+    <string name="common_done">Done</string>
+    <string name="common_back">Back</string>
+    <string name="common_change">Change</string>
+    <string name="common_remove">Remove</string>
+    <string name="common_refresh">Refresh</string>
+    <string name="common_unknown">Unknown</string>
+    <string name="common_no_teacher">No teacher</string>
+
+    <string name="bookmarks_title">Bookmarks</string>
+    <string name="bookmarks_empty_title">No bookmarks yet</string>
+    <string name="bookmarks_empty_subtitle">Search for your university programme and bookmark its schedule.</string>
+    <string name="bookmarks_find_schedule">Find schedule</string>
+    <string name="bookmarks_no_events_cached">No cached events yet. Refresh your saved schedules.</string>
+    <string name="bookmarks_no_events">No events</string>
+    <string name="bookmarks_nothing_day">Nothing scheduled on this day.</string>
+    <string name="bookmarks_week_number">Week %1$d</string>
+    <string name="bookmarks_daily">Daily</string>
+    <string name="bookmarks_weekly">Weekly</string>
+    <string name="a11y_add_schedule">Add schedule</string>
+    <string name="a11y_refresh">Refresh schedules</string>
+
+    <string name="search_title">Search</string>
+    <string name="search_choose_university">Choose your university</string>
+    <string name="search_programme_or_course">Programme or course</string>
+    <string name="search_no_programmes">No programmes found. Try a different search.</string>
+
+    <string name="schedule_title">Schedule</string>
+    <string name="schedule_no_events">No events found for this schedule.</string>
+    <string name="schedule_saved">Saved to bookmarks</string>
+    <string name="schedule_previewing">Previewing schedule</string>
+    <string name="a11y_remove_bookmark">Remove bookmark</string>
+    <string name="a11y_bookmark">Bookmark</string>
+
+    <string name="event_title">Event</string>
+    <string name="event_details_title">Event details</string>
+    <string name="event_unavailable_title">Event unavailable</string>
+    <string name="event_unavailable_subtitle">This event is not in the local cache anymore.</string>
+    <string name="event_date">Date</string>
+    <string name="event_time">Time</string>
+    <string name="event_location">Location</string>
+    <string name="event_teachers">Teachers</string>
+    <string name="event_special">Special event</string>
+    <string name="event_floor">floor %1$s</string>
+
+    <string name="settings_title">Settings</string>
+    <string name="settings_appearance">Appearance</string>
+    <string name="appearance_system">System</string>
+    <string name="appearance_dark">Dark</string>
+    <string name="appearance_light">Light</string>
+    <string name="settings_language">Language &amp; Region</string>
+    <string name="settings_language_subtitle">Managed by Android</string>
+    <string name="settings_bookmarks">Saved schedules</string>
+    <string name="settings_no_saved_schedules">No saved schedules</string>
+</resources>

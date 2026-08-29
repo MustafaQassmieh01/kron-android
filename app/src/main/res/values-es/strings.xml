@@ -1,0 +1,56 @@
+<resources>
+    <string name="app_name">Kron</string>
+    <string name="common_done">Listo</string>
+    <string name="common_back">Atrás</string>
+    <string name="common_change">Cambiar</string>
+    <string name="common_remove">Eliminar</string>
+    <string name="common_refresh">Actualizar</string>
+    <string name="common_unknown">Desconocido</string>
+    <string name="common_no_teacher">Sin profesor</string>
+
+    <string name="bookmarks_title">Favoritos</string>
+    <string name="bookmarks_empty_title">Aún no hay favoritos</string>
+    <string name="bookmarks_empty_subtitle">Busca tu programa universitario y guarda su horario.</string>
+    <string name="bookmarks_find_schedule">Buscar horario</string>
+    <string name="bookmarks_no_events_cached">Todavía no hay eventos guardados. Actualiza tus horarios.</string>
+    <string name="bookmarks_no_events">Sin eventos</string>
+    <string name="bookmarks_nothing_day">No hay nada programado este día.</string>
+    <string name="bookmarks_week_number">Semana %1$d</string>
+    <string name="bookmarks_daily">Día</string>
+    <string name="bookmarks_weekly">Semana</string>
+    <string name="a11y_add_schedule">Añadir horario</string>
+    <string name="a11y_refresh">Actualizar horarios</string>
+
+    <string name="search_title">Buscar</string>
+    <string name="search_choose_university">Elige tu universidad</string>
+    <string name="search_programme_or_course">Programa o curso</string>
+    <string name="search_no_programmes">No se encontraron programas. Prueba otra búsqueda.</string>
+
+    <string name="schedule_title">Horario</string>
+    <string name="schedule_no_events">No se encontraron eventos para este horario.</string>
+    <string name="schedule_saved">Guardado en favoritos</string>
+    <string name="schedule_previewing">Vista previa del horario</string>
+    <string name="a11y_remove_bookmark">Eliminar favorito</string>
+    <string name="a11y_bookmark">Guardar favorito</string>
+
+    <string name="event_title">Evento</string>
+    <string name="event_details_title">Detalles del evento</string>
+    <string name="event_unavailable_title">Evento no disponible</string>
+    <string name="event_unavailable_subtitle">Este evento ya no está en la caché local.</string>
+    <string name="event_date">Fecha</string>
+    <string name="event_time">Hora</string>
+    <string name="event_location">Ubicación</string>
+    <string name="event_teachers">Profesores</string>
+    <string name="event_special">Evento especial</string>
+    <string name="event_floor">planta %1$s</string>
+
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="appearance_system">Sistema</string>
+    <string name="appearance_dark">Oscuro</string>
+    <string name="appearance_light">Claro</string>
+    <string name="settings_language">Idioma y región</string>
+    <string name="settings_language_subtitle">Gestionado por Android</string>
+    <string name="settings_bookmarks">Horarios guardados</string>
+    <string name="settings_no_saved_schedules">No hay horarios guardados</string>
+</resources>
