@@ -30,6 +30,7 @@
     <string name="schedule_no_events">No events found for this schedule.</string>
     <string name="schedule_saved">Saved to bookmarks</string>
     <string name="schedule_previewing">Previewing schedule</string>
+    <string name="schedule_free_bookmark_limit">The free version supports one saved schedule. Remove the current schedule in Settings to save another, or upgrade to the full version for multiple saved schedules.</string>
     <string name="a11y_remove_bookmark">Remove bookmark</string>
     <string name="a11y_bookmark">Bookmark</string>
 
