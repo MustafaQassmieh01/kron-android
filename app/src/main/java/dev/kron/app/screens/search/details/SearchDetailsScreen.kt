@@ -16,6 +16,7 @@ import dev.kron.app.R
 import dev.kron.app.application.KronApplication
 import dev.kron.app.models.network.Event
 import dev.kron.app.screens.other.EventCard
+import dev.kron.app.screens.other.dayTitle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,6 +42,9 @@ fun SearchDetailsScreen(
     }
 
     val bookmarked = bookmarks.containsKey(programmeId)
+    val groupedEvents = remember(events) {
+        events.sortedBy { it.from }.groupBy { dayTitle(it.from) }
+    }
 
     Scaffold(
         topBar = {
@@ -55,6 +59,9 @@ fun SearchDetailsScreen(
                                 app.appSettings.removeBookmarkedProgramme(programmeId)
                                 app.eventStorage.removeEventsForProgramme(programmeId)
                             } else {
+                                bookmarks.keys
+                                    .filterNot { it == programmeId }
+                                    .forEach { app.eventStorage.removeEventsForProgramme(it) }
                                 app.appSettings.addBookmarkedProgramme(programmeId, schoolId)
                                 app.eventStorage.saveEvents(events)
                             }
@@ -73,15 +80,18 @@ fun SearchDetailsScreen(
             loading -> Box(Modifier.padding(padding).fillMaxSize()) {
                 CircularProgressIndicator(Modifier.padding(32.dp))
             }
+
             error != null -> Text(
                 error.orEmpty(),
                 color = MaterialTheme.colorScheme.error,
                 modifier = Modifier.padding(padding).padding(20.dp)
             )
+
             events.isEmpty() -> Text(
                 stringResource(R.string.schedule_no_events),
                 modifier = Modifier.padding(padding).padding(20.dp)
             )
+
             else -> LazyColumn(
                 Modifier.padding(padding),
                 contentPadding = PaddingValues(16.dp),
@@ -95,10 +105,21 @@ fun SearchDetailsScreen(
                     )
                     Spacer(Modifier.height(8.dp))
                 }
-                items(events.sortedBy { it.from }, key = { it.id }) { event ->
-                    EventCard(event) {
-                        app.eventStorage.saveEvents(listOf(event))
-                        onEvent(event.id)
+
+                groupedEvents.forEach { (dateTitle, dayEvents) ->
+                    item(key = "date-$dateTitle") {
+                        Text(
+                            dateTitle,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                        )
+                    }
+                    items(dayEvents, key = { it.id }) { event ->
+                        EventCard(event) {
+                            app.eventStorage.saveEvents(listOf(event))
+                            onEvent(event.id)
+                        }
                     }
                 }
             }
