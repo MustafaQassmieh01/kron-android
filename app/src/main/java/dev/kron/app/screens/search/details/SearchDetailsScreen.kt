@@ -94,25 +94,25 @@ fun SearchDetailsScreen(
 
             else -> LazyColumn(
                 Modifier.padding(padding),
-                contentPadding = PaddingValues(16.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 item {
-                    Text(programmeId, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Text(
                         if (bookmarked) stringResource(R.string.schedule_saved) else stringResource(R.string.schedule_previewing),
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 4.dp)
                     )
-                    Spacer(Modifier.height(8.dp))
                 }
 
                 groupedEvents.forEach { (dateTitle, dayEvents) ->
                     item(key = "date-$dateTitle") {
                         Text(
                             dateTitle,
-                            style = MaterialTheme.typography.titleSmall,
+                            style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
                         )
                     }
                     items(dayEvents, key = { it.id }) { event ->
