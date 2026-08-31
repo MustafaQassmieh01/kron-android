@@ -1,5 +1,6 @@
 package dev.kron.app.screens.bookmarks
 
+import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,19 +17,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import dev.kron.app.R
 import dev.kron.app.application.KronApplication
-import dev.kron.app.application.settings.BookmarksViewType
 import dev.kron.app.models.network.Event
 import dev.kron.app.screens.other.EventCard
 import dev.kron.app.screens.other.dayTitle
 import kotlinx.coroutines.launch
-import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.ZoneId
-import java.time.format.TextStyle
-import java.time.temporal.TemporalAdjusters
-import java.time.temporal.WeekFields
 import java.util.Date
-import java.util.Locale
+
+private const val REFRESH_COOLDOWN_MS = 30_000L
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,15 +38,18 @@ fun BookmarksScreen(
     val scope = rememberCoroutineScope()
     val events by app.eventStorage.events.collectAsState()
     val bookmarks by app.appSettings.bookmarkedProgrammes.collectAsState()
-    val viewType by app.appSettings.bookmarkViewType.collectAsState()
     var refreshing by remember { mutableStateOf(false) }
     var refreshError by remember { mutableStateOf<String?>(null) }
+    var lastRefreshAt by remember { mutableStateOf(0L) }
 
     val bookmarkedIds = bookmarks.keys
     val visibleEvents = events.filter { it.scheduleId in bookmarkedIds }
 
     fun refreshSchedules() {
-        if (bookmarks.isEmpty() || refreshing) return
+        val now = SystemClock.elapsedRealtime()
+        if (bookmarks.isEmpty() || refreshing || now - lastRefreshAt < REFRESH_COOLDOWN_MS) return
+        lastRefreshAt = now
+
         scope.launch {
             refreshing = true
             refreshError = null
@@ -109,36 +109,7 @@ fun BookmarksScreen(
                     stringResource(R.string.common_refresh)
                 )
 
-                else -> {
-                    ViewTypeTabs(viewType) { app.appSettings.setBookmarkViewType(it) }
-                    when (viewType) {
-                        BookmarksViewType.DAILY -> DailyEvents(visibleEvents, onEvent)
-                        BookmarksViewType.WEEKLY -> WeeklyEvents(visibleEvents, onEvent)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-private fun ViewTypeTabs(selected: BookmarksViewType, onSelected: (BookmarksViewType) -> Unit) {
-    SingleChoiceSegmentedButtonRow(
-        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)
-    ) {
-        BookmarksViewType.entries.forEachIndexed { index, type ->
-            SegmentedButton(
-                selected = selected == type,
-                onClick = { onSelected(type) },
-                shape = SegmentedButtonDefaults.itemShape(index, BookmarksViewType.entries.size)
-            ) {
-                Text(
-                    when (type) {
-                        BookmarksViewType.DAILY -> stringResource(R.string.bookmarks_daily)
-                        BookmarksViewType.WEEKLY -> stringResource(R.string.bookmarks_weekly)
-                    }
-                )
+                else -> DailyEvents(visibleEvents, onEvent)
             }
         }
     }
@@ -146,94 +117,28 @@ private fun ViewTypeTabs(selected: BookmarksViewType, onSelected: (BookmarksView
 
 @Composable
 private fun DailyEvents(events: List<Event>, onEvent: (String) -> Unit) {
-    var selectedDay by remember { mutableStateOf(LocalDate.now()) }
-    val dayEvents = events.filter { localDate(it.from) == selectedDay }.sortedBy { it.from }
-
-    Column(Modifier.fillMaxSize()) {
-        DayNavigator(
-            title = selectedDay.format(java.time.format.DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.getDefault())),
-            onPrevious = { selectedDay = selectedDay.minusDays(1) },
-            onNext = { selectedDay = selectedDay.plusDays(1) }
-        )
-
-        if (dayEvents.isEmpty()) {
-            EmptyState(stringResource(R.string.bookmarks_no_events), stringResource(R.string.bookmarks_nothing_day))
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(dayEvents, key = { it.id }) { event ->
-                    EventCard(event) { onEvent(event.id) }
-                }
-            }
-        }
+    val groupedEvents = remember(events) {
+        events.sortedBy { it.from }.groupBy { localDate(it.from) }
     }
-}
 
-@Composable
-private fun WeeklyEvents(events: List<Event>, onEvent: (String) -> Unit) {
-    var selectedDay by remember { mutableStateOf(LocalDate.now()) }
-    val monday = selectedDay.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
-
-    Column(Modifier.fillMaxSize()) {
-        DayNavigator(
-            title = stringResource(
-                R.string.bookmarks_week_number,
-                monday.get(WeekFields.ISO.weekOfWeekBasedYear())
-            ),
-            onPrevious = { selectedDay = selectedDay.minusWeeks(1) },
-            onNext = { selectedDay = selectedDay.plusWeeks(1) }
-        )
-
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            (0..6).forEach { index ->
-                val day = monday.plusDays(index.toLong())
-                FilterChip(
-                    selected = day == selectedDay,
-                    onClick = { selectedDay = day },
-                    label = {
-                        Text(
-                            "${day.dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()).take(2)}\n${day.dayOfMonth}"
-                        )
-                    },
-                    modifier = Modifier.weight(1f)
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        groupedEvents.forEach { (date, dayEvents) ->
+            item(key = "date-$date") {
+                Text(
+                    dayTitle(dayEvents.first().from),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.padding(top = 6.dp, bottom = 2.dp)
                 )
             }
-        }
-
-        val dayEvents = events.filter { localDate(it.from) == selectedDay }.sortedBy { it.from }
-        if (dayEvents.isEmpty()) {
-            EmptyState(stringResource(R.string.bookmarks_no_events), stringResource(R.string.bookmarks_nothing_day))
-        } else {
-            LazyColumn(
-                contentPadding = PaddingValues(16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                item {
-                    Text(dayTitle(dayEvents.first().from), fontWeight = FontWeight.SemiBold)
-                }
-                items(dayEvents, key = { it.id }) { event ->
-                    EventCard(event) { onEvent(event.id) }
-                }
+            items(dayEvents, key = { it.id }) { event ->
+                EventCard(event) { onEvent(event.id) }
             }
         }
-    }
-}
-
-@Composable
-private fun DayNavigator(title: String, onPrevious: () -> Unit, onNext: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().padding(horizontal = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.SpaceBetween
-    ) {
-        TextButton(onClick = onPrevious) { Text("‹") }
-        Text(title, fontWeight = FontWeight.SemiBold)
-        TextButton(onClick = onNext) { Text("›") }
     }
 }
 
