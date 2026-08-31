@@ -1,6 +1,5 @@
 package dev.kron.app.screens.bookmarks
 
-import android.os.SystemClock
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -10,6 +9,7 @@ import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -20,6 +20,7 @@ import dev.kron.app.application.KronApplication
 import dev.kron.app.models.network.Event
 import dev.kron.app.screens.other.EventCard
 import dev.kron.app.screens.other.dayTitle
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.ZoneId
@@ -39,16 +40,22 @@ fun BookmarksScreen(
     val events by app.eventStorage.events.collectAsState()
     val bookmarks by app.appSettings.bookmarkedProgrammes.collectAsState()
     var refreshing by remember { mutableStateOf(false) }
+    var refreshCoolingDown by rememberSaveable { mutableStateOf(false) }
     var refreshError by remember { mutableStateOf<String?>(null) }
-    var lastRefreshAt by remember { mutableStateOf(0L) }
 
     val bookmarkedIds = bookmarks.keys
     val visibleEvents = events.filter { it.scheduleId in bookmarkedIds }
 
+    LaunchedEffect(refreshCoolingDown) {
+        if (refreshCoolingDown) {
+            delay(REFRESH_COOLDOWN_MS)
+            refreshCoolingDown = false
+        }
+    }
+
     fun refreshSchedules() {
-        val now = SystemClock.elapsedRealtime()
-        if (bookmarks.isEmpty() || refreshing || now - lastRefreshAt < REFRESH_COOLDOWN_MS) return
-        lastRefreshAt = now
+        if (bookmarks.isEmpty() || refreshing || refreshCoolingDown) return
+        refreshCoolingDown = true
 
         scope.launch {
             refreshing = true
@@ -71,7 +78,10 @@ fun BookmarksScreen(
             TopAppBar(
                 title = { Text(stringResource(R.string.bookmarks_title)) },
                 actions = {
-                    IconButton(onClick = ::refreshSchedules, enabled = bookmarks.isNotEmpty() && !refreshing) {
+                    IconButton(
+                        onClick = ::refreshSchedules,
+                        enabled = bookmarks.isNotEmpty() && !refreshing && !refreshCoolingDown
+                    ) {
                         Icon(Icons.Outlined.Refresh, stringResource(R.string.a11y_refresh))
                     }
                     IconButton(onClick = onSearch) {
