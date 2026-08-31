@@ -21,13 +21,26 @@ class AppSettings(context: Context) {
     private val _appearance = MutableStateFlow(enumPref("appearance", AppAppearance.SYSTEM))
     val appearance: StateFlow<AppAppearance> = _appearance.asStateFlow()
 
+    /**
+     * Full-version entitlement hook.
+     *
+     * The Android port does not have billing/entitlement verification yet, so the
+     * current build behaves as the free version. Replace this implementation with
+     * the verified store entitlement when billing is added.
+     */
+    val hasFullVersion: Boolean
+        get() = false
+
     fun setAppearance(value: AppAppearance) {
         prefs.edit().putString("appearance", value.name).apply()
         _appearance.value = value
     }
 
     fun addBookmarkedProgramme(programmeId: String, schoolId: String) {
-        saveBookmarks(mapOf(programmeId to BookmarkedProgrammeData(schoolId)))
+        val next = _bookmarkedProgrammes.value.toMutableMap().apply {
+            put(programmeId, BookmarkedProgrammeData(schoolId))
+        }
+        saveBookmarks(next)
     }
 
     fun removeBookmarkedProgramme(programmeId: String) {
@@ -41,11 +54,8 @@ class AppSettings(context: Context) {
         val json = prefs.getString("bookmarkedProgrammes", null) ?: return emptyMap()
         val type = object : TypeToken<Map<String, BookmarkedProgrammeData>>() {}.type
         return runCatching {
-            val parsed = gson.fromJson<Map<String, BookmarkedProgrammeData>>(json, type)
-            parsed.entries
-                .firstOrNull { it.value.schoolId.isNotBlank() }
-                ?.let { mapOf(it.key to it.value) }
-                .orEmpty()
+            gson.fromJson<Map<String, BookmarkedProgrammeData>>(json, type)
+                .filterValues { it.schoolId.isNotBlank() }
         }.getOrDefault(emptyMap())
     }
 
