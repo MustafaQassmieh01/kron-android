@@ -4,6 +4,7 @@ import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.animation.AnimatedContentTransitionScope
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.navigation.NavType
@@ -27,7 +28,22 @@ class MainActivity : ComponentActivity() {
             val appearance by app.appSettings.appearance.collectAsState()
             KronTheme(appearance) {
                 val nav = rememberNavController()
-                NavHost(navController = nav, startDestination = "bookmarks") {
+                NavHost(
+                    navController = nav,
+                    startDestination = "bookmarks",
+                    enterTransition = {
+                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Left)
+                    },
+                    exitTransition = {
+                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Left)
+                    },
+                    popEnterTransition = {
+                        slideIntoContainer(AnimatedContentTransitionScope.SlideDirection.Right)
+                    },
+                    popExitTransition = {
+                        slideOutOfContainer(AnimatedContentTransitionScope.SlideDirection.Right)
+                    }
+                ) {
                     composable("bookmarks") {
                         BookmarksScreen(
                             app = app,
