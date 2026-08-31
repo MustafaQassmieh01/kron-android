@@ -17,6 +17,7 @@ import dev.kron.app.application.KronApplication
 import dev.kron.app.models.network.Event
 import dev.kron.app.screens.other.EventCard
 import dev.kron.app.screens.other.dayTitle
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -31,6 +32,9 @@ fun SearchDetailsScreen(
     var events by remember(programmeId) { mutableStateOf<List<Event>>(emptyList()) }
     var loading by remember(programmeId) { mutableStateOf(true) }
     var error by remember(programmeId) { mutableStateOf<String?>(null) }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val bookmarkLimitMessage = stringResource(R.string.schedule_free_bookmark_limit)
 
     LaunchedEffect(programmeId, schoolId) {
         loading = true
@@ -47,6 +51,7 @@ fun SearchDetailsScreen(
     }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.schedule_title)) },
@@ -55,15 +60,22 @@ fun SearchDetailsScreen(
                     IconButton(
                         enabled = events.isNotEmpty(),
                         onClick = {
-                            if (bookmarked) {
-                                app.appSettings.removeBookmarkedProgramme(programmeId)
-                                app.eventStorage.removeEventsForProgramme(programmeId)
-                            } else {
-                                bookmarks.keys
-                                    .filterNot { it == programmeId }
-                                    .forEach { app.eventStorage.removeEventsForProgramme(it) }
-                                app.appSettings.addBookmarkedProgramme(programmeId, schoolId)
-                                app.eventStorage.saveEvents(events)
+                            when {
+                                bookmarked -> {
+                                    app.appSettings.removeBookmarkedProgramme(programmeId)
+                                    app.eventStorage.removeEventsForProgramme(programmeId)
+                                }
+
+                                !app.appSettings.hasFullVersion && bookmarks.isNotEmpty() -> {
+                                    scope.launch {
+                                        snackbarHostState.showSnackbar(bookmarkLimitMessage)
+                                    }
+                                }
+
+                                else -> {
+                                    app.appSettings.addBookmarkedProgramme(programmeId, schoolId)
+                                    app.eventStorage.saveEvents(events)
+                                }
                             }
                         }
                     ) {
