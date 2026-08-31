@@ -15,21 +15,18 @@ import dev.kron.app.R
 import dev.kron.app.application.KronApplication
 import dev.kron.app.models.network.Programme
 import dev.kron.app.models.network.School
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolId: String, programmeId: String) -> Unit) {
-    val scope = rememberCoroutineScope()
     var schools by remember { mutableStateOf<List<School>>(emptyList()) }
     var selectedSchoolId by rememberSaveable { mutableStateOf<String?>(null) }
     var query by rememberSaveable { mutableStateOf("") }
+    var submittedQuery by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchRequestVersion by rememberSaveable { mutableIntStateOf(0) }
     var results by remember { mutableStateOf<List<Programme>>(emptyList()) }
     var loading by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
-    var searchJob by remember { mutableStateOf<Job?>(null) }
-    var hasSearched by rememberSaveable { mutableStateOf(false) }
 
     val selectedSchool = schools.firstOrNull { it.id == selectedSchoolId }
 
@@ -40,9 +37,25 @@ fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolI
                 schools = loadedSchools
                 if (selectedSchoolId != null && loadedSchools.none { it.id == selectedSchoolId }) {
                     selectedSchoolId = null
+                    submittedQuery = null
                 }
             }
             .onFailure { error = it.message }
+        loading = false
+    }
+
+    LaunchedEffect(selectedSchool?.id, submittedQuery, searchRequestVersion) {
+        val school = selectedSchool ?: return@LaunchedEffect
+        val searchText = submittedQuery?.takeIf { it.isNotBlank() } ?: return@LaunchedEffect
+
+        loading = true
+        error = null
+        runCatching { app.apiService.searchProgrammes(searchText, school.id) }
+            .onSuccess { results = it.programmes }
+            .onFailure {
+                results = emptyList()
+                error = it.message
+            }
         loading = false
     }
 
@@ -71,8 +84,8 @@ fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolI
                                 onClick = {
                                     selectedSchoolId = school.id
                                     query = ""
+                                    submittedQuery = null
                                     results = emptyList()
-                                    hasSearched = false
                                     error = null
                                 },
                                 modifier = Modifier.fillMaxWidth()
@@ -89,9 +102,7 @@ fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolI
                 }
 
                 selectedSchool == null -> {
-                    if (loading) {
-                        LinearProgressIndicator(Modifier.fillMaxWidth())
-                    }
+                    if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
                 }
 
@@ -109,9 +120,10 @@ fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolI
                         TextButton(
                             onClick = {
                                 selectedSchoolId = null
-                                results = emptyList()
                                 query = ""
-                                hasSearched = false
+                                submittedQuery = null
+                                results = emptyList()
+                                error = null
                             }
                         ) {
                             Text(stringResource(R.string.common_change))
@@ -126,8 +138,10 @@ fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolI
                             value = query,
                             onValueChange = {
                                 query = it
-                                results = emptyList()
-                                hasSearched = false
+                                if (submittedQuery != null) {
+                                    submittedQuery = null
+                                    results = emptyList()
+                                }
                             },
                             label = { Text(stringResource(R.string.search_programme_or_course)) },
                             singleLine = true,
@@ -136,19 +150,11 @@ fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolI
                         Spacer(Modifier.width(8.dp))
                         Button(
                             onClick = {
-                                if (query.isBlank()) return@Button
-                                searchJob?.cancel()
-                                hasSearched = true
-                                searchJob = scope.launch {
-                                    loading = true
-                                    error = null
-                                    runCatching { app.apiService.searchProgrammes(query.trim(), selectedSchool.id) }
-                                        .onSuccess { results = it.programmes }
-                                        .onFailure { error = it.message }
-                                    loading = false
-                                }
-                            },
-                            modifier = Modifier.align(Alignment.CenterVertically)
+                                val searchText = query.trim()
+                                if (searchText.isBlank()) return@Button
+                                submittedQuery = searchText
+                                searchRequestVersion++
+                            }
                         ) {
                             Text(stringResource(R.string.search_title))
                         }
@@ -156,7 +162,7 @@ fun SearchScreen(app: KronApplication, onBack: () -> Unit, onProgramme: (schoolI
 
                     if (loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     error?.let { Text(it, color = MaterialTheme.colorScheme.error, modifier = Modifier.padding(16.dp)) }
-                    if (hasSearched && !loading && results.isEmpty() && error == null) {
+                    if (submittedQuery != null && !loading && results.isEmpty() && error == null) {
                         Text(stringResource(R.string.search_no_programmes), modifier = Modifier.padding(20.dp))
                     }
                     LazyColumn(contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
