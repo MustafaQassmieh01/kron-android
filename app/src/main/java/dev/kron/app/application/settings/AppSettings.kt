@@ -7,7 +7,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class BookmarksViewType { DAILY, WEEKLY }
 enum class AppAppearance { SYSTEM, DARK, LIGHT }
 
 data class BookmarkedProgrammeData(val schoolId: String)
@@ -19,16 +18,8 @@ class AppSettings(context: Context) {
     private val _bookmarkedProgrammes = MutableStateFlow(loadBookmarks())
     val bookmarkedProgrammes: StateFlow<Map<String, BookmarkedProgrammeData>> = _bookmarkedProgrammes.asStateFlow()
 
-    private val _bookmarkViewType = MutableStateFlow(enumPref("bookmarkViewType", BookmarksViewType.DAILY))
-    val bookmarkViewType: StateFlow<BookmarksViewType> = _bookmarkViewType.asStateFlow()
-
     private val _appearance = MutableStateFlow(enumPref("appearance", AppAppearance.SYSTEM))
     val appearance: StateFlow<AppAppearance> = _appearance.asStateFlow()
-
-    fun setBookmarkViewType(type: BookmarksViewType) {
-        prefs.edit().putString("bookmarkViewType", type.name).apply()
-        _bookmarkViewType.value = type
-    }
 
     fun setAppearance(value: AppAppearance) {
         prefs.edit().putString("appearance", value.name).apply()
@@ -36,10 +27,7 @@ class AppSettings(context: Context) {
     }
 
     fun addBookmarkedProgramme(programmeId: String, schoolId: String) {
-        val next = _bookmarkedProgrammes.value.toMutableMap().apply {
-            put(programmeId, BookmarkedProgrammeData(schoolId))
-        }
-        saveBookmarks(next)
+        saveBookmarks(mapOf(programmeId to BookmarkedProgrammeData(schoolId)))
     }
 
     fun removeBookmarkedProgramme(programmeId: String) {
@@ -53,8 +41,11 @@ class AppSettings(context: Context) {
         val json = prefs.getString("bookmarkedProgrammes", null) ?: return emptyMap()
         val type = object : TypeToken<Map<String, BookmarkedProgrammeData>>() {}.type
         return runCatching {
-            gson.fromJson<Map<String, BookmarkedProgrammeData>>(json, type)
-                .filterValues { it.schoolId.isNotBlank() }
+            val parsed = gson.fromJson<Map<String, BookmarkedProgrammeData>>(json, type)
+            parsed.entries
+                .firstOrNull { it.value.schoolId.isNotBlank() }
+                ?.let { mapOf(it.key to it.value) }
+                .orEmpty()
         }.getOrDefault(emptyMap())
     }
 
