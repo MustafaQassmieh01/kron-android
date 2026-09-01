@@ -1,107 +1,151 @@
-# KRON Android — Kotlin Port
+# KRON for Android
 
-An Android/Kotlin port of the original KRON schedule application.
+Native Android port of the KRON university schedule application, built with **Kotlin** and **Jetpack Compose**.
 
-This repository is a fork used to rebuild the existing application for Android while preserving the original app's structure, behavior, and overall user experience as closely as practical.
+This repository contains my Android implementation of an existing KRON application. The port was developed against the original product behaviour, reviewed through GitHub, and **merged into the upstream Android repository**.
 
-## Project Status
+> **Upstream contribution:** [defaultdino/kron-android#1](https://github.com/defaultdino/kron-android/pull/1)
+>
+> **Canonical upstream repository:** [defaultdino/kron-android](https://github.com/defaultdino/kron-android)
 
-**In development**
+## What I built
 
-The current focus is on establishing a clean Kotlin/Android codebase and bringing the Android version to feature parity with the original application.
+I ported the application's core schedule workflow to Android and took it from an initial repository skeleton to a working Kotlin/Compose MVP.
 
-## Goals
+The implementation includes:
 
-- Recreate the original KRON application for Android.
-- Keep the Android project structure easy to compare with the original application.
-- Preserve the existing user flow and core schedule functionality.
-- Use native Android/Kotlin tooling.
-- Improve Android-specific behavior where appropriate without unnecessarily changing the original design.
+- university and programme search using the live KRON API
+- schedule preview with events grouped by day
+- persistent saved schedules
+- local event caching for previously loaded schedules
+- manual schedule refresh and cache cleanup
+- event detail views for time, location and teachers
+- light, dark and system appearance modes
+- Android navigation with swipe-style transitions
+- search-state preservation when navigating between results and schedule previews
+- free/full-version product logic limiting the free version to one saved schedule
+- clear user feedback when the saved-schedule limit is reached
+- English and Spanish Android resources
 
-## Tech Stack
+## Engineering highlights
 
-- **Kotlin**
-- **Android Studio**
-- **Android SDK**
-- **Gradle**
+### Android UI and state
 
-Additional libraries and architectural decisions will be documented as the Android implementation develops.
+The app uses **Jetpack Compose** for the interface and Compose state / `StateFlow` for reactive application state. Navigation is handled with Navigation Compose, including forward/back swipe-style transitions.
 
-## Project Structure
+### API integration
 
-The Android project is organized to keep responsibilities separated and make the implementation easy to navigate.
+`KronApiService` communicates with the KRON backend using **OkHttp** and **Gson**. The networking layer handles:
 
-```text
-app/
-└── src/
-    └── main/
-        ├── java/          # Kotlin source code
-        ├── res/           # Layouts, drawables, strings and other Android resources
-        └── AndroidManifest.xml
+- university discovery
+- programme search
+- schedule event retrieval
+- HTTP-specific error states
+- flexible ISO-8601 timestamp parsing
+- correct encoding of schedule IDs containing `+`
+
+### Persistence and offline behaviour
+
+Saved programme metadata is persisted with `SharedPreferences`, while schedule events are stored in a local JSON cache. Cached events can remain available after reopening the app, and stale events are cleaned automatically.
+
+### Product behaviour
+
+The Android implementation does more than reproduce screens. It also ports product rules and interaction details, including saved-schedule limits, refresh behaviour, grouped schedule previews, persistent search state and user guidance around free/full-version restrictions.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    UI[Jetpack Compose UI] --> APP[KronApplication]
+    APP --> SETTINGS[AppSettings]
+    APP --> API[KronApiService]
+    APP --> STORE[EventStorageService]
+
+    SETTINGS --> PREFS[SharedPreferences]
+    API --> KRON[KRON API]
+    STORE --> CACHE[Local JSON cache]
+
+    UI --> NAV[Navigation Compose]
 ```
 
-The structure may evolve as features are implemented.
+## Project structure
 
-## Getting Started
+```text
+app/src/main/java/dev/kron/app/
+├── application/
+│   ├── KronApplication.kt
+│   └── settings/
+├── models/network/
+├── screens/
+│   ├── bookmarks/
+│   ├── search/
+│   ├── settings/
+│   └── other/
+├── services/kron/
+│   ├── api/
+│   └── store/event/
+└── ui/theme/
+```
+
+## Tech stack
+
+| Area | Technology |
+| --- | --- |
+| Language | Kotlin |
+| UI | Jetpack Compose, Material 3 |
+| Navigation | Navigation Compose |
+| State | StateFlow, Compose state |
+| Networking | OkHttp |
+| JSON | Gson |
+| Persistence | SharedPreferences, local JSON cache |
+| Build | Gradle, Android Gradle Plugin |
+| Target | Android SDK 35, min SDK 26 |
+
+## Contribution history
+
+The first working Android port was developed in this fork and submitted upstream through a pull request. The contribution was accepted and merged into the project owner's repository.
+
+The merged work covers the Android application structure, API integration, search and schedule flows, persistence, caching, UI behaviour and subsequent product/UX fixes.
+
+**Merged pull request:** [Port KRON Android app to Kotlin and Jetpack Compose](https://github.com/defaultdino/kron-android/pull/1)
+
+## Run locally
 
 ### Requirements
 
 - Android Studio
-- A compatible Android SDK
-- JDK supported by the project's Gradle version
+- JDK 17
+- Android SDK compatible with compile SDK 35
 - Android emulator or physical Android device
 
-### Run locally
-
-1. Clone the fork:
+### Build
 
 ```bash
 git clone https://github.com/MustafaQassmieh01/kron-android.git
 cd kron-android
+./gradlew assembleDebug
 ```
 
-2. Open the project in **Android Studio**.
-3. Allow Gradle to sync and install any required SDK components.
-4. Select an emulator or connected Android device.
-5. Run the `app` configuration.
+On Windows:
 
-## Development Approach
+```powershell
+gradlew.bat assembleDebug
+```
 
-The port is being developed incrementally:
+Then open the repository in Android Studio and run the `app` configuration on an emulator or connected device.
 
-1. Establish the Android/Kotlin project structure.
-2. Recreate the main screens and navigation.
-3. Port the original application's data and scheduling logic.
-4. Match the original UI and interactions.
-5. Test behavior against the original application.
-6. Refine Android-specific UX and edge cases.
+## Verification
 
-## Current Work
+During development the Android MVP was manually verified to:
 
-- Kotlin project setup
-- Android screen structure
-- Navigation
-- Porting existing schedule functionality
-- Matching the original application's behavior and layout
+- build successfully with Gradle
+- launch in the Android emulator
+- load live university/programme data
+- search programmes and preview schedules
+- save schedules persistently
+- render cached bookmarked events
+- navigate between the main application flows
 
-## Fork / Attribution Note
+## Attribution
 
-This repository is an Android port based on an existing project.
-
-The fork is used to develop and test the Kotlin implementation independently without affecting the original repository. Where appropriate, the original project's behavior and design are retained while the implementation is adapted for Android.
-
-## Roadmap
-
-- [ ] Verify project builds cleanly in Android Studio
-- [ ] Complete primary navigation
-- [ ] Port all main screens
-- [ ] Implement schedule data handling
-- [ ] Match original interactions and visual behavior
-- [ ] Add loading and error states
-- [ ] Test on multiple Android screen sizes
-- [ ] Clean up architecture and documentation
-- [ ] Prepare a stable Android release
-
-## License
-
-This fork follows the licensing terms of the original repository. See the repository's license file for details.
+KRON is an existing project created and maintained by the upstream project owner. This repository is my Android port/contribution and is presented here to document the software engineering work I contributed to the project. Original product ownership and design remain with the upstream project.
